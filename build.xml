@@ -1,0 +1,87 @@
+<project>
+	<taskdef resource="net/sf/antcontrib/antlib.xml"/>
+	<property name="jboss.home" value="/home/server/server_base"></property>
+	
+    <target name="deploy">		       
+		<propertyselector property="hostnames" match="server([^\.]*)\.hostname"/>
+        <sortlist property="sorted.hostnames" value="${hostnames}"/>
+		<echo message="${sorted.hostnames}" />
+		<for list="${sorted.hostnames}" param="hostname">
+			<sequential>
+				<if>
+					<equals arg1="${stop.server}" arg2="true" />
+					<then>	
+						<echo level="info" message="############################################" />
+						<echo level="info" message="Stopping Application Server on ${node}." />
+						<echo level="info" message="############################################" />
+						
+						<sshexec 
+							host="${node}"
+							username="server" 
+							password="${server.password}"
+							command=". .bash_profile;
+									server stop;"
+							trust="true" />	
+						
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="Stopped Application Server on ${node}." />
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="" />
+					</then>
+					<else>
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="Skipping Stopping ${node}." />
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="" />
+					</else>
+				</if>
+				<echo level="info" message="##########################" />
+				<echo level="info" message="Starting to chef ${node} app." />
+				<echo level="info" message="##########################" />
+				<sshexec 
+					host="${node}"
+					username="${windows.username}" 
+					password="${windows.password}"
+					command="cd /tmp/vagrant;
+							 sudo chef-solo -c solo.rb -j app_node.json -E ${@{hostname}}"
+					trust="true" />
+						
+				<echo level="info" message="##########################" />
+				<echo level="info" message="Finished executing chef scripts for ${node} app." />
+				<echo level="info" message="##########################" />
+				<if>
+				 	<equals arg1="${start.server}" arg2="true" />
+					<then>
+						<echo level="info" message="############################################" />
+						<echo level="info" message="Starting Application Server on ${node}." />
+						<echo level="info" message="############################################" />
+						<sshexec 
+							host="${node}"
+							username="server" 
+							password="${server.password}"
+							command=". .bash_profile;
+									server start"
+							trust="true" />
+						
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="Started Application Server on ${node}." />
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="" />
+					</then>
+					<else>
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="Skipping Startup on ${node}." />
+						<echo level="info" message="###########################################" />
+						<echo level="info" message="" />
+					</else>
+			</if>
+			</sequential>
+		</for>
+		
+        <echo level="info" message="#################################" />
+        <echo level="info" message="CHEF SUCCESSFULLY COMPLETED" />
+        <echo level="info" message="#################################" />
+
+    </target>
+
+</project>
